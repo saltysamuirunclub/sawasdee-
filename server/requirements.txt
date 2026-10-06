@@ -1,0 +1,9 @@
+fastapi==0.142.2
+uvicorn[standard]
+httpx
+anthropic==1.11.0
+pywebpush==2.5.0
+apscheduler>=3.10,<4
+jinja2
+itsdangerous
+python-multipart

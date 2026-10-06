@@ -1,0 +1,16 @@
+{
+  "app.name": "Salty Island Run Club",
+  "nav.home": "Home",
+  "nav.runs": "Runs",
+  "nav.club": "Club",
+  "nav.settings": "Settings",
+  "auth.login_with_strava": "Connect with Strava",
+  "auth.logout": "Log out",
+  "settings.language": "Language",
+  "settings.saved": "Saved",
+  "home.days_to_race": "{days} days to race day",
+  "home.estimate": "Estimated marathon: {time} (goal {goal})",
+  "push.enable": "Enable notifications",
+  "push.enabled": "Notifications are on",
+  "push.install_hint": "To get notifications on iPhone/iPad: tap Share → Add to Home Screen, then open the app from the icon."
+}
