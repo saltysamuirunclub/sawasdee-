@@ -211,14 +211,15 @@ def store_activity(conn: sqlite3.Connection, user_id: int, a: dict) -> bool:
         conn.execute(
             """INSERT INTO activities (id, user_id, name, sport_type, start_date, start_date_local,
                  distance_m, moving_time_s, elapsed_time_s, elevation_gain_m, avg_hr, max_hr,
-                 workout_type, category, splits_json)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 workout_type, category, splits_json, description)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(id) DO UPDATE SET name=excluded.name, sport_type=excluded.sport_type,
                  distance_m=excluded.distance_m, moving_time_s=excluded.moving_time_s,
                  elapsed_time_s=excluded.elapsed_time_s, elevation_gain_m=excluded.elevation_gain_m,
                  avg_hr=excluded.avg_hr, max_hr=excluded.max_hr, workout_type=excluded.workout_type,
                  category=excluded.category,
-                 splits_json=COALESCE(excluded.splits_json, activities.splits_json)""",
+                 splits_json=COALESCE(excluded.splits_json, activities.splits_json),
+                 description=COALESCE(excluded.description, activities.description)""",
             (
                 a["id"], user_id, name, a.get("sport_type") or a.get("type"),
                 a["start_date"], a["start_date_local"], a.get("distance") or 0,
@@ -226,6 +227,7 @@ def store_activity(conn: sqlite3.Connection, user_id: int, a: dict) -> bool:
                 a.get("total_elevation_gain"), a.get("average_heartrate"), a.get("max_heartrate"),
                 workout_type, categorize(name, a.get("distance") or 0, workout_type),
                 json.dumps(parse_splits(a)) if "splits_metric" in a else None,
+                a.get("description"),
             ),
         )
     return exists is None

@@ -77,6 +77,12 @@ MIGRATIONS: list[str] = [
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     """,
+    # 2: coach profile filled in the app, weekly notes, Strava run description
+    """
+    ALTER TABLE users ADD COLUMN profile_json TEXT NOT NULL DEFAULT '{}';
+    ALTER TABLE users ADD COLUMN weekly_notes TEXT NOT NULL DEFAULT '';
+    ALTER TABLE activities ADD COLUMN description TEXT;
+    """,
 ]
 
 
