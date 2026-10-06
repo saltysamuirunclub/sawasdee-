@@ -14,5 +14,7 @@
   "push.enabled": "Benachrichtigungen sind an",
   "push.install_hint": "Für Benachrichtigungen auf iPhone/iPad: Teilen → Zum Home-Bildschirm, dann die App über das Symbol öffnen.",
   "push.analysis_failed": "Lauf gespeichert. Die Coach-Analyse ist fehlgeschlagen – sie wird wiederholt.",
-  "push.test": "Benachrichtigungen funktionieren! 🌴"
+  "push.test": "Benachrichtigungen funktionieren! 🌴",
+  "push.weekly_title": "📅 Dein Wochenplan",
+  "push.weekly_failed": "Der Wochenplan konnte nicht erstellt werden – er wird wiederholt."
 }

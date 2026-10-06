@@ -2,7 +2,7 @@
 import argparse
 import sys
 
-from . import pipeline, push, strava, webhook
+from . import pipeline, push, scheduler, strava, webhook
 from .db import get_db, init_db
 from .logging_setup import setup_logging
 
@@ -39,6 +39,15 @@ def cmd_retry(args) -> None:
         print(f"Re-coached {pipeline.retry_failed(conn)} runs")
 
 
+def cmd_weekly(args) -> None:
+    with get_db() as conn:
+        users = [args.user] if args.user else [r[0] for r in conn.execute(
+            "SELECT id FROM users WHERE coach_enabled = 1")]
+        for user_id in users:
+            ok = scheduler.send_weekly_plan(conn, user_id, force=args.force)
+            print(f"user {user_id}: {'sent' if ok else 'not sent (see log)'}")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -53,6 +62,11 @@ def main(argv: list[str] | None = None) -> None:
 
     sub.add_parser("vapid", help="Generate push notification keys").set_defaults(func=cmd_vapid)
     sub.add_parser("retry", help="Retry coach analysis for failed runs").set_defaults(func=cmd_retry)
+
+    p = sub.add_parser("weekly", help="Send the weekly plan now")
+    p.add_argument("--user", type=int)
+    p.add_argument("--force", action="store_true", help="even if this week's plan exists")
+    p.set_defaults(func=cmd_weekly)
 
     args = parser.parse_args(argv)
     setup_logging()

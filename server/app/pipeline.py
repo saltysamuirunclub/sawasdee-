@@ -43,8 +43,11 @@ def coach_run(conn: sqlite3.Connection, user_id: int, activity_id: int) -> bool:
     return True
 
 
-def retry_failed(conn: sqlite3.Connection, user_id: int | None = None) -> int:
-    rows = conn.execute(
-        "SELECT id, user_id FROM activities WHERE coach_status = 'failed'"
-        + (" AND user_id = ?" if user_id else ""), (user_id,) if user_id else ()).fetchall()
+def retry_failed(conn: sqlite3.Connection, max_age_days: int | None = None) -> int:
+    sql = "SELECT id, user_id FROM activities WHERE coach_status = 'failed'"
+    params: tuple = ()
+    if max_age_days is not None:
+        sql += " AND created_at >= datetime('now', ?)"
+        params = (f"-{max_age_days} days",)
+    rows = conn.execute(sql, params).fetchall()
     return sum(coach_run(conn, r["user_id"], r["id"]) for r in rows)

@@ -14,5 +14,7 @@
   "push.enabled": "Notifications are on",
   "push.install_hint": "To get notifications on iPhone/iPad: tap Share → Add to Home Screen, then open the app from the icon.",
   "push.analysis_failed": "Run saved. The coach analysis failed — it will be retried.",
-  "push.test": "Notifications work! 🌴"
+  "push.test": "Notifications work! 🌴",
+  "push.weekly_title": "📅 Your week plan",
+  "push.weekly_failed": "The weekly plan could not be created — it will be retried."
 }

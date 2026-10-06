@@ -1,5 +1,6 @@
 """FastAPI entry point. Run with: uvicorn app.main:app (from the server/ folder)."""
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from datetime import date
@@ -7,7 +8,7 @@ from datetime import date
 from fastapi import BackgroundTasks, Body, Depends, FastAPI, HTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import auth, i18n, pipeline, profile, push, webhook
+from . import auth, i18n, pipeline, profile, push, scheduler, webhook
 from .config import settings
 from .db import get_db, init_db
 from .logging_setup import setup_logging
@@ -19,8 +20,11 @@ log = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     setup_logging()
     init_db()
+    jobs = scheduler.start() if os.environ.get("DISABLE_SCHEDULER") != "1" else None
     log.info("Salty Island Run Club started")
     yield
+    if jobs:
+        jobs.shutdown(wait=False)
 
 
 app = FastAPI(title="Salty Island Run Club", lifespan=lifespan)
@@ -158,4 +162,25 @@ def recoach_run(activity_id: int, background: BackgroundTasks,
     if not user["coach_enabled"]:
         raise HTTPException(status_code=403, detail="Coach is not enabled for your account")
     background.add_task(_retry_job, user_id, activity_id)
+    return {"queued": True}
+
+
+def _plan_job(user_id: int) -> None:
+    try:
+        with get_db() as conn:
+            scheduler.send_weekly_plan(conn, user_id)
+    except Exception:
+        log.exception("Plan on demand failed for user %d", user_id)
+
+
+@app.post("/api/plan")
+def plan_now(background: BackgroundTasks, user_id: int = Depends(auth.require_user)) -> dict:
+    """Create this week's plan now (e.g. right after joining). Once per week."""
+    with get_db() as conn:
+        user = conn.execute("SELECT coach_enabled FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not user["coach_enabled"]:
+            raise HTTPException(status_code=403, detail="Coach is not enabled for your account")
+        if scheduler.has_plan_this_week(conn, user_id):
+            raise HTTPException(status_code=409, detail="You already have a plan for this week")
+    background.add_task(_plan_job, user_id)
     return {"queued": True}

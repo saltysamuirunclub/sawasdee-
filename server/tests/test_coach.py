@@ -142,3 +142,25 @@ def test_invalid_subscription_rejected(conn):
     user_id = setup_member(conn)
     with pytest.raises(ValueError):
         push.save_subscription(conn, user_id, {"endpoint": "http://evil", "keys": {"p256dh": "k", "auth": "a"}})
+
+
+def test_weekly_plan_once_per_week(conn, fake_claude, pushes):
+    from app import scheduler
+    user_id = setup_member(conn)
+    assert scheduler.send_weekly_plan(conn, user_id) is True
+    assert scheduler.send_weekly_plan(conn, user_id) is False      # already sent this week
+    assert scheduler.send_weekly_plan(conn, user_id, force=True) is True
+    assert len(fake_claude.calls) == 2
+    assert pushes[0][0] == "📅 Your week plan" and pushes[0][2] == "/plan"
+
+
+def test_scheduler_runs_monday_6am_bangkok():
+    from app import scheduler
+    from datetime import datetime
+    jobs = scheduler.start()
+    try:
+        nxt = jobs.get_job("weekly_plan").next_run_time
+        assert nxt.weekday() == 0 and nxt.hour in (6, 9, 13, 18) and nxt.minute == 0
+        assert nxt.utcoffset().total_seconds() == 7 * 3600
+    finally:
+        jobs.shutdown(wait=False)
