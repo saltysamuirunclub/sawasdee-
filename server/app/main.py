@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import auth
+from . import auth, webhook
 from .config import settings
 from .db import get_db, init_db
 from .logging_setup import setup_logging
@@ -31,6 +31,7 @@ app.add_middleware(
     https_only=settings.base_url.startswith("https://"),
 )
 app.include_router(auth.router)
+app.include_router(webhook.router)
 
 
 @app.get("/healthz")
