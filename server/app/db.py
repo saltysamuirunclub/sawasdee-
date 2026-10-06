@@ -83,6 +83,10 @@ MIGRATIONS: list[str] = [
     ALTER TABLE users ADD COLUMN weekly_notes TEXT NOT NULL DEFAULT '';
     ALTER TABLE activities ADD COLUMN description TEXT;
     """,
+    # 3: one-line summary of each coach message (shown in push notifications)
+    """
+    ALTER TABLE coach_messages ADD COLUMN summary TEXT NOT NULL DEFAULT '';
+    """,
 ]
 
 

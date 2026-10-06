@@ -4,10 +4,10 @@ from contextlib import asynccontextmanager
 
 from datetime import date
 
-from fastapi import Body, Depends, FastAPI, HTTPException
+from fastapi import BackgroundTasks, Body, Depends, FastAPI, HTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import auth, i18n, profile, webhook
+from . import auth, i18n, pipeline, profile, push, webhook
 from .config import settings
 from .db import get_db, init_db
 from .logging_setup import setup_logging
@@ -101,3 +101,61 @@ def update_profile(payload: dict = Body(...), user_id: int = Depends(auth.requir
     except (profile.ProfileError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     return get_profile(user_id)
+
+
+# ---- push notifications ------------------------------------------------------
+
+@app.get("/api/push/key")
+def push_key() -> dict:
+    return {"public_key": settings.vapid_public_key}
+
+
+@app.post("/api/push/subscribe")
+def push_subscribe(subscription: dict = Body(...), user_id: int = Depends(auth.require_user)) -> dict:
+    try:
+        with get_db() as conn:
+            push.save_subscription(conn, user_id, subscription)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {"ok": True}
+
+
+@app.post("/api/push/unsubscribe")
+def push_unsubscribe(payload: dict = Body(...), user_id: int = Depends(auth.require_user)) -> dict:
+    with get_db() as conn:
+        push.delete_subscription(conn, user_id, str(payload.get("endpoint", "")))
+    return {"ok": True}
+
+
+@app.post("/api/push/test")
+def push_test(user_id: int = Depends(auth.require_user)) -> dict:
+    with get_db() as conn:
+        lang = conn.execute("SELECT language FROM users WHERE id = ?", (user_id,)).fetchone()[0]
+        sent = push.send_to_user(conn, user_id, i18n.t("app.name", lang), i18n.t("push.test", lang))
+    return {"sent": sent}
+
+
+# ---- coach -------------------------------------------------------------------
+
+def _retry_job(user_id: int, activity_id: int) -> None:
+    try:
+        with get_db() as conn:
+            pipeline.coach_run(conn, user_id, activity_id)
+    except Exception:
+        log.exception("Retry failed for run %d", activity_id)
+
+
+@app.post("/api/runs/{activity_id}/coach")
+def recoach_run(activity_id: int, background: BackgroundTasks,
+                user_id: int = Depends(auth.require_user)) -> dict:
+    """Ask the coach again about a run (e.g. after a failure)."""
+    with get_db() as conn:
+        user = conn.execute("SELECT coach_enabled FROM users WHERE id = ?", (user_id,)).fetchone()
+        run = conn.execute("SELECT 1 FROM activities WHERE id = ? AND user_id = ?",
+                           (activity_id, user_id)).fetchone()
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    if not user["coach_enabled"]:
+        raise HTTPException(status_code=403, detail="Coach is not enabled for your account")
+    background.add_task(_retry_job, user_id, activity_id)
+    return {"queued": True}

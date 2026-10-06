@@ -2,7 +2,7 @@
 import argparse
 import sys
 
-from . import strava, webhook
+from . import pipeline, push, strava, webhook
 from .db import get_db, init_db
 from .logging_setup import setup_logging
 
@@ -27,6 +27,18 @@ def cmd_webhook(args) -> None:
             print("Deleted subscription", sub["id"])
 
 
+def cmd_vapid(args) -> None:
+    public, private = push.generate_vapid_keys()
+    print("Add these to your .env file:")
+    print(f"VAPID_PUBLIC_KEY={public}")
+    print(f"VAPID_PRIVATE_KEY={private}")
+
+
+def cmd_retry(args) -> None:
+    with get_db() as conn:
+        print(f"Re-coached {pipeline.retry_failed(conn)} runs")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -38,6 +50,9 @@ def main(argv: list[str] | None = None) -> None:
     p = sub.add_parser("webhook", help="Manage the Strava webhook subscription")
     p.add_argument("action", choices=["create", "list", "delete"])
     p.set_defaults(func=cmd_webhook)
+
+    sub.add_parser("vapid", help="Generate push notification keys").set_defaults(func=cmd_vapid)
+    sub.add_parser("retry", help="Retry coach analysis for failed runs").set_defaults(func=cmd_retry)
 
     args = parser.parse_args(argv)
     setup_logging()

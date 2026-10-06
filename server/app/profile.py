@@ -151,13 +151,13 @@ def render_for_coach(conn: sqlite3.Connection, user_id: int) -> str:
     p = load(conn, user_id)
     unknown = "unknown"
 
-    def val(key, fmt=str):
-        return fmt(p[key]) if key in p else unknown
+    def val(key, fmt=str, unit=""):
+        return f"{fmt(p[key])}{unit}" if key in p else unknown
 
     lines = ["## Member profile (from the app — this wins over coach.md)"]
     lines.append(f"- Name: {user['name'] or unknown}")
-    lines.append(f"- Age: {val('age')} · Sex: {val('sex')} · Weight: {val('weight_kg')} kg")
-    lines.append(f"- Running for: {val('years_running')} years · Current weekly distance: {val('current_weekly_km')} km")
+    lines.append(f"- Age: {val('age')} · Sex: {val('sex')} · Weight: {val('weight_kg', unit=' kg')}")
+    lines.append(f"- Running for: {val('years_running')} years · Current weekly distance: {val('current_weekly_km', unit=' km')}")
     lines.append(f"- Injuries / weak spots: {val('injuries')}")
     lines.append(f"- Other sports: {val('other_sports')}")
     lines.append("- Personal bests: " + " · ".join(
@@ -171,13 +171,13 @@ def render_for_coach(conn: sqlite3.Connection, user_id: int) -> str:
                      f"(marathon pace {format_pace(user['goal_time_s'] / MARATHON_KM)} /km)")
     else:
         lines.append("- Goal: unknown")
-    lines.append(f"- Course: {val('course')} · Expected temperature: {val('race_temp_c')} °C · "
+    lines.append(f"- Course: {val('course')} · Expected temperature: {val('race_temp_c', unit=' °C')} · "
                  f"Plan B: {val('plan_b_time', format_time)}")
 
     lines.append("\n### Availability")
     lines.append(f"- Runs per week: {val('runs_per_week')}")
     lines.append(f"- Days I can run: {', '.join(p['run_days']) if 'run_days' in p else unknown}")
-    lines.append(f"- Long run day: {val('long_run_day')} · Max weekday run: {val('weekday_max_min')} min")
+    lines.append(f"- Long run day: {val('long_run_day')} · Max weekday run: {val('weekday_max_min', unit=' min')}")
 
     lines.append("\n### Heart rate")
     est = estimated_max_hr(conn, user_id)
